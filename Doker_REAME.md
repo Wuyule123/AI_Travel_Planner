@@ -2,6 +2,38 @@
 
 ## 快速开始
 
+
+## 本地构建镜像
+
+```bash
+# 克隆仓库
+git clone https://github.com/yourusername/ai-travel-planner.git
+cd ai-travel-planner
+```
+
+在根目录下创建 `.env` 文件填入如下内容:
+```env
+NEXT_PUBLIC_AMAP_KEY=your_amap_key
+NEXT_PUBLIC_AMAP_SECRET=your_amap_secret
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+DASHSCOPE_API_KEY=your_dashscope_key
+DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+DASHSCOPE_MODEL=qwen-plus
+IFLYTEK_APPID=your_iflytek_appid
+IFLYTEK_APIKEY=your_iflytek_apikey
+```
+
+```bash
+# 构建镜像并运行
+./run.sh
+
+# 停止容器并清除
+./stop.sh
+```
+
+
 ### 使用预构建的镜像
 
 ```bash
@@ -68,24 +100,6 @@ services:
 
 ```bash
 docker-compose up -d
-```
-
-## 本地构建镜像
-
-```bash
-# 克隆仓库
-git clone https://github.com/yourusername/ai-travel-planner.git
-cd ai-travel-planner
-
-# 构建镜像
-docker build -t ai-travel-planner:local .
-
-# 运行
-docker run -d \
-  --name ai-travel-planner \
-  -p 3000:3000 \
-  --env-file .env.docker \
-  ai-travel-planner:local
 ```
 
 ## 容器管理
