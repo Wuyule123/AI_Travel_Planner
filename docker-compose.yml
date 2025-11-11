@@ -1,0 +1,49 @@
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_AMAP_KEY: ${NEXT_PUBLIC_AMAP_KEY}
+        NEXT_PUBLIC_AMAP_SECRET: ${NEXT_PUBLIC_AMAP_SECRET}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    image: ai-travel-planner:local
+    container_name: ai-travel-planner
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # 高德地图配置
+      - NEXT_PUBLIC_AMAP_KEY=${NEXT_PUBLIC_AMAP_KEY}
+      - NEXT_PUBLIC_AMAP_SECRET=${NEXT_PUBLIC_AMAP_SECRET}
+      
+      # Supabase 配置
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      
+      # DashScope (通义千问) 配置
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - DASHSCOPE_BASE_URL=${DASHSCOPE_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      - DASHSCOPE_MODEL=${DASHSCOPE_MODEL:-qwen-plus}
+      
+      # 讯飞语音配置
+      - IFLYTEK_APPID=${IFLYTEK_APPID}
+      - IFLYTEK_APIKEY=${IFLYTEK_APIKEY}
+      
+      # Node 环境
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
