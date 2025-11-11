@@ -11,7 +11,7 @@ on:
 env:
   # 阿里云镜像仓库配置
   REGISTRY: registry.cn-hangzhou.aliyuncs.com  # 根据你的区域修改
-  IMAGE_NAME: your-namespace/ai-travel-planner  # 修改为你的命名空间和镜像名
+  IMAGE_NAME: ai_travel_planner12/ai-travel-planner  # 修改为你的命名空间和镜像名
 
 jobs:
   build-and-push:
