@@ -2,10 +2,9 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import SpeechButton from '../../components/SpeechButton'
-// ...existing code...
-import { supabase } from '../../lib/supabase'
-import type { Trip } from '../../lib/schema'
+import SpeechButton from '@/components/SpeechButton'
+import { supabase } from '@/lib/supabase'
+import type { Trip } from '@/lib/schema'
 import { useRouter } from 'next/navigation'
 
 export default function PlannerPage(){
@@ -16,8 +15,8 @@ export default function PlannerPage(){
 
   const callPlan = async () => {
     setLoading(true)
-    // 简单解析：也可做表单结构化（目的地/天数/预算/人数/标签）
-    const body = { destination:'东京', days:5, budget:10000, people:3, tags:['美食','动漫','亲子'] }
+    // 直接发送用户的自然语言输入
+    const body = { prompt }
     const resp = await fetch('/api/plan', { method:'POST', body: JSON.stringify(body) })
     setLoading(false)
     const data = await resp.json()
@@ -37,7 +36,7 @@ export default function PlannerPage(){
       trip_json: trip
     })
     if (error) return alert(error.message)
-    alert('已保存，前往仪表盘查看')
+    alert('已保存,前往仪表盘查看')
     r.push('/dashboard')
   }
 
@@ -46,7 +45,7 @@ export default function PlannerPage(){
       <h1 className="text-2xl font-semibold">智能行程规划</h1>
       <div className="flex gap-2 items-center">
         <SpeechButton onText={t=>setPrompt(t)} />
-        <Textarea value={prompt} onChange={e=>setPrompt(e.target.value)} />
+        <Textarea value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="例如: 我想从南京到泰州旅行2天，预算500" />
       </div>
       <div className="flex gap-2">
         <Button onClick={callPlan} disabled={loading}>{loading? '生成中…':'生成行程'}</Button>
