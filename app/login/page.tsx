@@ -20,13 +20,13 @@ export default function LoginPage() {
   const translateError = (errorMessage: string): string => {
     const errorMap: Record<string, string> = {
       'Invalid login credentials': '邮箱或密码错误',
-      'Email not confirmed': '邮箱未验证，请检查邮箱中的验证链接',
-      'User already registered': '该邮箱已注册，请直接登录',
+      'Email not confirmed': '邮箱未验证,请检查邮箱中的验证链接',
+      'User already registered': '该邮箱已注册',
       'Password should be at least 6 characters': '密码至少需要6个字符',
       'Unable to validate email address: invalid format': '邮箱格式不正确',
       'Invalid email': '邮箱格式不正确',
       'Signup requires a valid password': '请输入有效密码',
-      'Email rate limit exceeded': '操作过于频繁，请稍后再试',
+      'Email rate limit exceeded': '操作过于频繁,请稍后再试',
       'User not found': '用户不存在',
       'Invalid email or password': '邮箱或密码错误',
       'Email link is invalid or has expired': '邮箱验证链接无效或已过期',
@@ -47,27 +47,21 @@ export default function LoginPage() {
     return emailRegex.test(email)
   }
 
-  // 检查邮箱是否已注册
+  // 通过 API 路由检查邮箱是否已注册
   const checkEmailExists = async (email: string): Promise<boolean> => {
     try {
-      // 尝试使用该邮箱登录（使用错误密码）
-      // Supabase 会返回不同的错误信息来区分"用户不存在"和"密码错误"
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password: '___check_only___' // 临时密码，只用于检查
+      const response = await fetch('/api/check-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
       })
-
-      if (error) {
-        // 如果错误是"Invalid login credentials"，说明用户存在但密码错误
-        if (error.message.includes('Invalid login credentials')) {
-          return true // 用户已注册
-        }
-        // 其他错误也可能表示用户不存在
-        return false
-      }
-
-      return false
-    } catch (e) {
+      
+      const data = await response.json()
+      return data.exists
+    } catch (error) {
+      console.error('检查邮箱失败:', error)
       return false
     }
   }
@@ -95,15 +89,7 @@ export default function LoginPage() {
     setErr('')
     setSuccess('')
 
-    // 4. 检查邮箱是否已注册
-    const exists = await checkEmailExists(email)
-    if (!exists) {
-      setLoading(false)
-      setErr('该邮箱未注册，请先注册')
-      return
-    }
-
-    // 5. 执行登录
+    // 执行登录
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
     
@@ -137,14 +123,14 @@ export default function LoginPage() {
       return
     }
 
-    // 4. 密码强度验证（可选）
+    // 4. 密码强度验证
     if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
       setErr('密码需要包含字母和数字')
       return
     }
 
     // 5. 确认密码验证
-    if (isRegistering && password !== confirmPassword) {
+    if (password !== confirmPassword) {
       setErr('两次输入的密码不一致')
       return
     }
@@ -154,14 +140,14 @@ export default function LoginPage() {
     setSuccess('')
 
     // 6. 检查邮箱是否已注册
-    const exists = await checkEmailExists(email)
-    if (exists) {
+    const emailExists = await checkEmailExists(email)
+    if (emailExists) {
       setLoading(false)
-      setErr('该邮箱已注册，请直接登录')
+      setErr('该邮箱已注册,请直接登录')
       return
     }
 
-    // 7. 执行注册
+    // 执行注册
     const { data, error } = await supabase.auth.signUp({ 
       email, 
       password,
@@ -176,7 +162,7 @@ export default function LoginPage() {
       return
     }
 
-    // 8. 注册成功处理
+    // 注册成功处理
     if (data?.user) {
       // 检查是否需要邮箱验证
       if (data.user.confirmed_at) {
@@ -219,7 +205,7 @@ export default function LoginPage() {
           />
           
           <Input 
-            placeholder="密码（至少6个字符，需包含字母和数字）" 
+            placeholder="密码（至少6个字符,需包含字母和数字）" 
             type="password" 
             value={password} 
             onChange={e => setPassword(e.target.value)}

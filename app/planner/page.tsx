@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import SpeechButton from '@/components/SpeechButton'
@@ -19,17 +19,41 @@ export default function PlannerPage(){
   const [trip, setTrip] = useState<Trip|null>(null)
   const [showMapSelector, setShowMapSelector] = useState(false)
 
+  // 监听页面离开事件
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (loading) {
+        e.preventDefault()
+        e.returnValue = '行程正在生成中，确定要离开吗？'
+        return '行程正在生成中，确定要离开吗？'
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [loading])
+
   const callPlan = async () => {
     setLoading(true)
     const body = { prompt }
-    const resp = await fetch('/api/plan', { method:'POST', body: JSON.stringify(body) })
-    setLoading(false)
-    const data = await resp.json()
-    if (resp.ok) setTrip(data)
-    else alert('生成失败：'+data.error)
+    try {
+      const resp = await fetch('/api/plan', { method:'POST', body: JSON.stringify(body) })
+      const data = await resp.json()
+      if (resp.ok) setTrip(data)
+      else alert('生成失败：'+data.error)
+    } catch (error) {
+      alert('生成失败，请检查网络连接')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const saveTrip = async () => {
+    if (loading) {
+      alert('⚠️ 行程正在生成中，请等待生成完成后再保存')
+      return
+    }
+
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || !trip) return alert('请先登录 / 生成行程')
     const { error } = await supabase.from('trips').insert({
@@ -47,6 +71,11 @@ export default function PlannerPage(){
 
   // 处理地图选择
   const handleLocationSelect = (start: string, end: string) => {
+    if (loading) {
+      alert('⚠️ 行程正在生成中，无法更改出发地和目的地')
+      return
+    }
+
     // 移除旧的地点信息，保留其他描述
     const cleanedPrompt = prompt
       .replace(/我想从.+?到.+?旅行/g, '')
@@ -62,6 +91,17 @@ export default function PlannerPage(){
     }
     
     setShowMapSelector(false)
+  }
+
+  // 带确认的返回首页
+  const handleBackHome = () => {
+    if (loading) {
+      if (confirm('⚠️ 行程正在生成中，确定要离开吗？生成进度将会丢失。')) {
+        r.push('/')
+      }
+    } else {
+      r.push('/')
+    }
   }
 
   // 计算每日总花费
@@ -100,19 +140,41 @@ export default function PlannerPage(){
       {/* 返回按钮 */}
       <Button 
         variant="outline" 
-        onClick={() => r.push('/')}
+        onClick={handleBackHome}
       >
         返回首页
       </Button>
 
       <h1 className="text-3xl font-bold">智能行程规划</h1>
 
+      {/* 生成状态提示 */}
+      {loading && (
+        <Card className="border-orange-500 bg-orange-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-orange-600"></div>
+              <div className="text-orange-800">
+                <div className="font-semibold">正在生成行程...</div>
+                <div className="text-sm">请勿关闭页面或点击其他按钮，这可能需要几秒钟时间</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 地图选择器（可折叠） */}
       <div className="space-y-3">
         <Button
           variant="outline"
-          onClick={() => setShowMapSelector(!showMapSelector)}
+          onClick={() => {
+            if (loading) {
+              alert('⚠️ 行程正在生成中，请稍后再操作')
+              return
+            }
+            setShowMapSelector(!showMapSelector)
+          }}
           className="w-full"
+          disabled={loading}
         >
           {showMapSelector ? '隐藏地图选择' : '📍 从地图选择起点和终点'}
         </Button>
@@ -125,13 +187,29 @@ export default function PlannerPage(){
       {/* 提示词输入 */}
       <div className="space-y-3">
         <div className="flex items-start gap-3">
-          <SpeechButton onText={t=>setPrompt(t)} />
+          <SpeechButton 
+            onText={t => {
+              if (loading) {
+                alert('⚠️ 行程正在生成中，请稍后再输入')
+                return
+              }
+              setPrompt(t)
+            }} 
+            disabled={loading}
+          />
           <Textarea 
             value={prompt} 
-            onChange={e=>setPrompt(e.target.value)} 
+            onChange={e => {
+              if (loading) {
+                alert('⚠️ 行程正在生成中，无法修改需求')
+                return
+              }
+              setPrompt(e.target.value)
+            }}
             placeholder="例如: 我想从南京到泰州旅行2天，预算500&#10;&#10;详细描述你的旅行需求，包括：&#10;• 目的地&#10;• 出行天数&#10;• 预算范围&#10;• 人数和偏好（美食、文化、购物等）&#10;&#10;提示：也可以点击上方按钮从地图选择起点和终点"
             rows={8}
             className="text-base resize-none"
+            disabled={loading}
           />
         </div>
         <p className="text-sm text-muted-foreground">
@@ -141,9 +219,14 @@ export default function PlannerPage(){
       
       <div className="flex gap-3">
         <Button onClick={callPlan} disabled={loading} size="lg" className="px-8">
-          {loading? '生成中…':'生成行程'}
+          {loading? (
+            <span className="flex items-center gap-2">
+              <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+              生成中…
+            </span>
+          ):'生成行程'}
         </Button>
-        <Button onClick={saveTrip} variant="secondary" disabled={!trip} size="lg">
+        <Button onClick={saveTrip} variant="secondary" disabled={!trip || loading} size="lg">
           保存行程
         </Button>
       </div>
