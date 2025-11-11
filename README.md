@@ -1,36 +1,302 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌍 AI Travel Planner | AI 智能旅行规划助手
 
-## Getting Started
+基于 Next.js 和阿里云通义千问的智能旅行行程规划应用，通过 AI 帮你快速生成个性化旅行计划。
 
-First, run the development server:
+## ✨ 主要功能
 
+### 🎯 核心功能
+- **智能行程生成**：输入旅行需求，AI 自动生成详细的多日行程计划
+- **地图选点**：集成高德地图，可视化选择起点和终点
+- **语音输入**：支持语音描述旅行需求（需浏览器支持）
+- **预算规划**：自动估算各项费用，生成预算明细
+- **路线地图**：每日行程自动在地图上展示景点位置和路线
+
+### 📱 用户体验
+- **行程保存**：登录后可保存行程到个人仪表盘
+- **行程管理**：查看、编辑和删除已保存的行程
+- **响应式设计**：支持桌面端和移动端访问
+- **实时预览**：即时查看 AI 生成的行程详情
+
+## 🚀 快速开始
+
+### 环境要求
+- Node.js 18+
+- pnpm（推荐）或 npm
+- Supabase 账号
+- 阿里云账号（通义千问 API）
+- 高德地图 Web 端 Key
+
+### 安装步骤
+
+1. **克隆项目**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/yourusername/ai-travel-planner.git
+cd ai-travel-planner
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **安装依赖**
+```bash
+pnpm install
+# 或
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **配置环境变量**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+创建 `.env.local` 文件：
 
-## Learn More
+```bash
+# Supabase 配置
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-To learn more about Next.js, take a look at the following resources:
+# 阿里云通义千问 API
+DASHSCOPE_API_KEY=your_dashscope_api_key
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# 高德地图配置
+NEXT_PUBLIC_AMAP_KEY=your_amap_web_key
+NEXT_PUBLIC_AMAP_SECRET=your_amap_security_code
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. **设置数据库**
 
-## Deploy on Vercel
+在 Supabase 中创建 `trips` 表：
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```sql
+create table trips (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users not null,
+  title text not null,
+  destination text not null,
+  start_date text not null,
+  end_date text not null,
+  trip_json jsonb not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+-- 启用行级安全策略
+alter table trips enable row level security;
+
+-- 用户只能访问自己的行程
+create policy "Users can only access their own trips"
+  on trips for all
+  using (auth.uid() = user_id);
+```
+
+5. **启动开发服务器**
+```bash
+pnpm dev
+# 或
+npm run dev
+```
+
+访问 [http://localhost:3000](http://localhost:3000)
+
+## 📦 技术栈
+
+### 前端框架
+- **Next.js 14+** - React 全栈框架（App Router）
+- **TypeScript** - 类型安全
+- **Tailwind CSS** - 样式设计
+- **Shadcn/ui** - UI 组件库
+
+### 后端服务
+- **Supabase** - 数据库 + 用户认证
+- **阿里云通义千问** - AI 大语言模型
+- **高德地图 API** - 地图和地理编码服务
+
+### 核心依赖
+```json
+{
+  "next": "^15.0.0",
+  "react": "^19.0.0",
+  "typescript": "^5.0.0",
+  "@supabase/supabase-js": "^2.0.0",
+  "tailwindcss": "^3.4.0"
+}
+```
+
+## 📁 项目结构
+
+```
+ai-travel-planner/
+├── app/                      # Next.js App Router
+│   ├── api/                  # API 路由
+│   │   ├── plan/            # 行程生成 API
+│   │   └── trips/           # 行程 CRUD API
+│   ├── dashboard/           # 用户仪表盘
+│   ├── planner/             # 行程规划页面
+│   ├── trip/[id]/          # 行程详情页
+│   ├── login/              # 登录页面
+│   ├── layout.tsx          # 根布局
+│   └── page.tsx            # 首页
+├── src/
+│   ├── components/         # React 组件
+│   │   ├── AmapLoader.tsx  # 高德地图加载器
+│   │   ├── MapSelector.tsx # 地图选点组件
+│   │   ├── MapView.tsx     # 地图展示组件
+│   │   ├── SpeechButton.tsx # 语音输入按钮
+│   │   └── ui/             # UI 基础组件
+│   └── lib/                # 工具库
+│       ├── dashscope.ts    # 通义千问 API
+│       ├── supabase.ts     # Supabase 客户端
+│       ├── schema.ts       # TypeScript 类型定义
+│       └── utils.ts        # 工具函数
+├── .env.local              # 环境变量（需自行创建）
+├── next.config.ts          # Next.js 配置
+├── tailwind.config.ts      # Tailwind 配置
+└── tsconfig.json          # TypeScript 配置
+```
+
+## 🔑 API 密钥配置指南
+
+### 1. Supabase 设置
+1. 访问 [supabase.com](https://supabase.com)
+2. 创建新项目
+3. 在 Project Settings → API 中获取：
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+### 2. 阿里云通义千问
+1. 访问 [阿里云控制台](https://dashscope.console.aliyun.com/)
+2. 开通通义千问服务
+3. 创建 API Key：`DASHSCOPE_API_KEY`
+
+### 3. 高德地图
+1. 访问 [高德开放平台](https://console.amap.com/)
+2. 创建应用，选择 **Web 端（JS API）**
+3. 配置域名白名单：
+   - 开发环境：`localhost`、`127.0.0.1`
+   - 生产环境：你的实际域名
+4. 获取 Key：`NEXT_PUBLIC_AMAP_KEY`
+5. 启用安全密钥并获取：`NEXT_PUBLIC_AMAP_SECRET`
+
+## 🎨 功能展示
+
+### 1. 智能规划
+- 输入旅行需求（目的地、天数、预算、偏好）
+- AI 自动生成包含景点、餐饮、住宿、交通的完整行程
+- 自动估算各项费用
+
+### 2. 地图交互
+- 可视化选择起点和终点城市
+- 自动识别省市名称
+- 支持手动输入或地图选点两种模式
+
+### 3. 行程管理
+- 保存喜欢的行程到个人账户
+- 在仪表盘查看所有已保存行程
+- 支持编辑和删除行程
+
+### 4. 地图展示
+- 每日行程在地图上标注景点位置
+- 自动绘制游览路线
+- 点击标记查看详细信息
+
+## 🛠️ 开发命令
+
+```bash
+# 开发模式
+pnpm dev
+
+# 构建生产版本
+pnpm build
+
+# 启动生产服务器
+pnpm start
+
+# 代码检查
+pnpm lint
+
+# 类型检查
+pnpm type-check
+```
+
+## 📝 使用示例
+
+### 基本使用流程
+
+1. **访问规划页面**
+   ```
+   http://localhost:3000
+   ```
+
+2. **输入旅行需求**
+   - 方式一：直接在文本框输入
+     ```
+     我想从南京到泰州旅行2天，预算500元，喜欢美食和文化景点
+     ```
+   - 方式二：点击"从地图选择起点和终点"，在地图上选择
+   - 方式三：使用语音输入按钮
+
+3. **生成行程**
+   - 点击"生成行程"按钮
+   - 等待 AI 生成（通常 5-15 秒）
+
+4. **查看和保存**
+   - 查看每日详细行程和地图
+   - 点击"保存行程"（需先登录）
+
+
+## 🐛 常见问题
+
+### Q: 地图无法加载
+**A:** 检查高德地图配置：
+1. 确认 `.env.local` 中的 `NEXT_PUBLIC_AMAP_KEY` 和 `NEXT_PUBLIC_AMAP_SECRET` 正确
+2. 在高德控制台确认域名白名单配置
+3. 重启开发服务器
+
+### Q: AI 生成失败
+**A:** 检查阿里云配置：
+1. 确认 `DASHSCOPE_API_KEY` 正确
+2. 检查通义千问服务是否开通
+3. 查看控制台是否有余额
+
+### Q: 无法保存行程
+**A:** 检查 Supabase 配置：
+1. 确认已登录
+2. 检查 Supabase 表和 RLS 策略
+3. 查看浏览器控制台错误信息
+
+### Q: 逆地理编码失败（INVALID_USER_SCODE）
+**A:** 这是高德地图安全验证失败：
+1. 在高德控制台启用"安全密钥"
+2. 将安全密钥添加到 `.env.local` 的 `NEXT_PUBLIC_AMAP_SECRET`
+3. 确保域名在白名单中
+4. 重启开发服务器
+
+## 🤝 贡献指南
+
+欢迎提交 Issue 和 Pull Request！
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
+
+## 📄 License
+
+本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
+
+## 👨‍💻 作者
+
+Wuyule123
+
+## 🙏 致谢
+
+- [Next.js](https://nextjs.org/) - React 框架
+- [Supabase](https://supabase.com/) - 后端服务
+- [阿里云通义千问](https://tongyi.aliyun.com/) - AI 大模型
+- [高德地图](https://lbs.amap.com/) - 地图服务
+- [Shadcn/ui](https://ui.shadcn.com/) - UI 组件库
+- [Tailwind CSS](https://tailwindcss.com/) - CSS 框架
+
+## 📮 联系方式
+
+- Email: 1078314987@qq.com
+- GitHub: [@Wuyule123](https://github.com/Wuyule123)
+
+---
+
+⭐ 如果这个项目对你有帮助，请给个 Star 支持一下！
