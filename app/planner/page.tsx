@@ -195,7 +195,6 @@ export default function PlannerPage(){
               }
               setPrompt(t)
             }} 
-            disabled={loading}
           />
           <Textarea 
             value={prompt} 
