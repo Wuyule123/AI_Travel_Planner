@@ -1,118 +1,148 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useState, useEffect } from 'react'
+import { getSupabaseClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import type { Trip } from '@/lib/schema'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-export default function Dashboard(){
-  const r = useRouter()
-  const [rows, setRows] = useState<any[]>([])
+interface SavedTrip {
+  id: string
+  title: string
+  destination: string
+  start_date: string
+  end_date: string
+  created_at: string
+  trip_json: any
+}
+
+export default function DashboardPage() {
+  const router = useRouter()
+  const [trips, setTrips] = useState<SavedTrip[]>([])
   const [loading, setLoading] = useState(true)
+  const supabase = getSupabaseClient()
 
   useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return r.push('/login')
-      const { data, error } = await supabase.from('trips').select('*').order('created_at', { ascending: false })
-      if (!error && data) setRows(data)
-      setLoading(false)
-    })()
-  }, [r])
+    loadTrips()
+  }, [])
 
-  const deleteTrip = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation() // 阻止事件冒泡，避免触发卡片点击
-    if (!confirm('确定要删除这个行程吗？')) return
-    
-    const { error } = await supabase.from('trips').delete().eq('id', id)
-    if (error) {
-      alert('删除失败：' + error.message)
-    } else {
-      setRows(rows.filter(row => row.id !== id))
+  const loadTrips = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/auth')
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('trips')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setTrips(data || [])
+    } catch (error) {
+      console.error('加载行程失败:', error)
+      alert('加载行程失败')
+    } finally {
+      setLoading(false)
     }
   }
 
-  if (loading) {
-    return <div className="p-6">加载中...</div>
+  const deleteTrip = async (id: string) => {
+    if (!confirm('确定要删除这个行程吗？')) return
+
+    try {
+      const { error } = await supabase
+        .from('trips')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      
+      setTrips(trips.filter(t => t.id !== id))
+      alert('删除成功')
+    } catch (error) {
+      console.error('删除失败:', error)
+      alert('删除失败')
+    }
   }
 
-  if (rows.length === 0) {
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/')
+  }
+
+  if (loading) {
     return (
-      <div className="p-6 text-center space-y-4">
-        <Button 
-          variant="outline" 
-          onClick={() => r.push('/')}
-          className="absolute top-6 left-6"
-        >
-          ← 返回首页
-        </Button>
-        <h1 className="text-2xl font-semibold pt-8">我的行程</h1>
-        <p className="text-muted-foreground">还没有保存的行程</p>
-        <Button onClick={() => r.push('/planner')}>
-          创建第一个行程
-        </Button>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
   return (
-    <div className="p-6 space-y-4 max-w-7xl mx-auto">
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            onClick={() => r.push('/')}
-          >
-            ← 返回首页
+        <h1 className="text-3xl font-bold">我的行程</h1>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => router.push('/')}>
+            返回首页
           </Button>
-          <h1 className="text-2xl font-semibold">我的行程</h1>
+          <Button variant="outline" onClick={handleLogout}>
+            退出登录
+          </Button>
         </div>
-        <Button onClick={() => r.push('/planner')}>+ 新建行程</Button>
       </div>
-      
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {rows.map(row => {
-          const tripData = row.trip_json as Trip
-          return (
-            <Card 
-              key={row.id} 
-              className="hover:shadow-lg transition-shadow"
-            >
-              <CardHeader className="pb-3">
-                <div className="text-lg font-medium">{row.title}</div>
-                <div className="text-sm text-muted-foreground">
-                  📍 {row.destination}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  📅 {row.start_date} ~ {row.end_date}
-                </div>
-                {tripData.budget?.totalEstimate && (
-                  <div className="text-sm font-medium text-orange-600">
-                    💰 预算: ¥{tripData.budget.totalEstimate.toLocaleString()}
-                  </div>
-                )}
+
+      {trips.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground mb-4">还没有保存的行程</p>
+            <Button onClick={() => router.push('/planner')}>
+              开始规划行程
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {trips.map((trip) => (
+            <Card key={trip.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="text-xl">{trip.title}</CardTitle>
               </CardHeader>
-              <CardContent className="pt-0 flex gap-2">
-                <Button 
-                  onClick={() => r.push(`/trip/${row.id}`)}
-                  className="flex-1"
-                  size="sm"
-                >
-                  查看详情
-                </Button>
-                <Button 
-                  onClick={(e) => deleteTrip(row.id, e)}
-                  variant="destructive"
-                  size="sm"
-                >
-                  删除
-                </Button>
+              <CardContent className="space-y-3">
+                <div className="space-y-1 text-sm">
+                  <p className="text-muted-foreground">📍 {trip.destination}</p>
+                  <p className="text-muted-foreground">
+                    📅 {trip.start_date} ~ {trip.end_date}
+                  </p>
+                  <p className="text-muted-foreground">
+                    创建于 {new Date(trip.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => router.push(`/trip/${trip.id}`)}
+                  >
+                    查看详情
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => deleteTrip(trip.id)}
+                  >
+                    删除
+                  </Button>
+                </div>
               </CardContent>
             </Card>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

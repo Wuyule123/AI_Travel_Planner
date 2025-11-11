@@ -2,13 +2,14 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import type { Trip } from '@/lib/schema'
 
 export default function Home(){
   const router = useRouter()
+  const supabase = getSupabaseClient()
   const [user, setUser] = useState<any>(null)
   const [trips, setTrips] = useState<any[]>([])
   const [loading, setLoading] = useState(true)

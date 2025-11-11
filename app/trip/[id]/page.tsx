@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 import type { Trip, Day, Item } from '@/lib/schema'
 import MapView from '@/components/MapView'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 export default function TripPage(){
   const { id } = useParams() as { id: string }
   const router = useRouter()
+  const supabase = getSupabaseClient()
   const [trip, setTrip] = useState<Trip|null>(null)
   const [editingItem, setEditingItem] = useState<{dayIndex: number, itemIndex: number} | null>(null)
   const [editForm, setEditForm] = useState<Partial<Item>>({})

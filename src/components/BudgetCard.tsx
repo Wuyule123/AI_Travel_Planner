@@ -6,11 +6,11 @@ import type { Trip, Item } from '@/lib/schema'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export default function BudgetCard({ trip, onChange, tripId }:{ trip: Trip, onChange:(t:Trip)=>void, tripId:string }){
   const [showModal, setShowModal] = useState(false)
-  
+  const supabase = getSupabaseClient()
   // 表单字段
   const [selectedDay, setSelectedDay] = useState<string>('')
   const [type, setType] = useState<'sight'|'food'|'hotel'|'transport'|'activity'>('food')

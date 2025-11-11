@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import SpeechButton from '@/components/SpeechButton'
 import MapSelector from '@/components/MapSelector'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 import type { Trip, Day } from '@/lib/schema'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,6 +14,7 @@ import MapView from '@/components/MapView'
 
 export default function PlannerPage(){
   const r = useRouter()
+  const supabase = getSupabaseClient()
   const [prompt, setPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [trip, setTrip] = useState<Trip|null>(null)

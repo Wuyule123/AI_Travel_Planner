@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 
 export default function LoginPage() {
   const r = useRouter()
+  const supabase = getSupabaseClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
