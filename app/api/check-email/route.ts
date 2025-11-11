@@ -1,18 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-// 使用 service role key 来访问 auth.users 表
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // 需要在 .env.local 中添加
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
-
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json()
@@ -23,6 +11,29 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // 在函数内部初始化 Supabase Admin 客户端
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase environment variables')
+      return NextResponse.json(
+        { exists: false },
+        { status: 200 }
+      )
+    }
+
+    const supabaseAdmin = createClient(
+      supabaseUrl,
+      supabaseServiceKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
 
     // 使用 admin client 查询用户
     const { data, error } = await supabaseAdmin.auth.admin.listUsers()
