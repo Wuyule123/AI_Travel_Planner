@@ -53,6 +53,7 @@ NEXT_PUBLIC_AMAP_SECRET=
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 
 # 阿里云百炼 DashScope（OpenAI 兼容接口）
 DASHSCOPE_API_KEY=
@@ -163,6 +164,7 @@ ai-travel-planner/
 3. 在 Project Settings → API 中获取：
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
 
 ### 2. 阿里云通义千问
 1. 访问 [阿里云控制台](https://dashscope.console.aliyun.com/)
@@ -182,39 +184,16 @@ ai-travel-planner/
 
 #### 步骤 1：注册讯飞开放平台账号
 1. 访问 [讯飞开放平台](https://www.xfyun.cn/)
-2. 点击右上角"注册"，完成账号注册
-3. 进行实名认证（语音服务需要实名认证）
-
-#### 步骤 2：创建应用
-1. 登录后进入 [控制台](https://console.xfyun.cn/)
-2. 点击"创建新应用"
-3. 填写应用信息：
-   - **应用名称**：`AI Travel Planner`（或自定义）
-   - **应用平台**：选择 **WebAPI**
-   - **应用分类**：选择合适的分类
-4. 点击"提交"创建应用
-
-#### 步骤 3：开通语音听写服务
-1. 在控制台找到刚创建的应用
-2. 点击应用卡片进入详情页
-3. 在左侧菜单选择"服务管理"
-4. 找到 **"语音听写（流式版）"** 或 **"语音听写"**
-5. 点击"开通"按钮
-6. 选择套餐：
-   - **免费版**：每日 500 次调用，适合开发测试
-   - **付费版**：根据需求选择
-
-#### 步骤 4：获取 API 凭证
-1. 在应用详情页，找到 **"接口认证信息"** 部分
-2. 复制以下三个参数：
+2. 登录后进入 [控制台](https://console.xfyun.cn/)
+3. 在控制台找到刚创建的应用，点击应用卡片进入详情页，在左侧菜单选择"服务管理"，找到 **"语音听写（流式版）"** 或 **"语音听写"**，点击"开通"按钮
+4. 在应用详情页，找到 **"接口认证信息"** 部分
+   复制以下三个参数：
    ```
    APPID: xxxxxxxx
    APIKey: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    APISecret: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    ```
 
-#### 步骤 5：配置环境变量
-将获取的凭证添加到 `.env.local`：
 
 
 
