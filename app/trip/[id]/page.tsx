@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 
+export const dynamic = 'force-dynamic'
+
 export default function TripPage(){
   const { id } = useParams() as { id: string }
   const router = useRouter()

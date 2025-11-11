@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import type { Trip } from '@/lib/schema'
 
+export const dynamic = 'force-dynamic'
+
 export default function Home(){
   const router = useRouter()
   const supabase = getSupabaseClient()

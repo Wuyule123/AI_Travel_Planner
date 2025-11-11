@@ -1,18 +1,18 @@
 import { createClient } from '@supabase/supabase-js'
 
-// 不要在模块顶层初始化，而是导出一个函数来获取客户端
 export function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Missing Supabase environment variables')
+    // 构建时使用占位符，避免构建失败
+    // 运行时如果真的缺少环境变量，会在实际使用时报错
+    console.warn('⚠️ Supabase environment variables not found, using placeholders for build')
+    return createClient(
+      'https://placeholder.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTIwMDAsImV4cCI6MTk2MDc2ODAwMH0.placeholder'
+    )
   }
 
   return createClient(supabaseUrl, supabaseAnonKey)
 }
-
-// 为了向后兼容，保留默认导出（但仅在客户端使用）
-export const supabase = typeof window !== 'undefined' 
-  ? getSupabaseClient()
-  : null as any

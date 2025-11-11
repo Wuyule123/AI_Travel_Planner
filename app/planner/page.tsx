@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import MapView from '@/components/MapView'
 
+export const dynamic = 'force-dynamic'
+
 export default function PlannerPage(){
   const r = useRouter()
   const supabase = getSupabaseClient()

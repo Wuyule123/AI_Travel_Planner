@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { getSupabaseClient } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 export default function BudgetCard({ trip, onChange, tripId }:{ trip: Trip, onChange:(t:Trip)=>void, tripId:string }){
   const [showModal, setShowModal] = useState(false)
   const supabase = getSupabaseClient()
