@@ -90,6 +90,13 @@ IFLYTEK_APIKEY=your_iflytek_apikey
 ./run.sh
 ```
 
+##### 3. 一键停止
+
+```bash
+# Linux/Mac/WSL2
+./stop.sh
+```
+
 或手动运行：
 
 ```bash
