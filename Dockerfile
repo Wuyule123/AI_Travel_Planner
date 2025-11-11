@@ -1,5 +1,5 @@
-# 使用 Node.js 官方镜像作为基础镜像
-FROM node:18-alpine AS base
+# 使用 Node.js 20 官方镜像作为基础镜像
+FROM node:20-alpine AS base
 
 # 安装依赖阶段
 FROM base AS deps
@@ -17,7 +17,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # 设置环境变量
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # 构建应用
 RUN corepack enable pnpm && pnpm run build
@@ -26,8 +26,8 @@ RUN corepack enable pnpm && pnpm run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # 创建非 root 用户
 RUN addgroup --system --gid 1001 nodejs
@@ -42,8 +42,8 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 # 启动应用
 CMD ["node", "server.js"]
