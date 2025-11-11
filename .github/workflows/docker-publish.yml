@@ -3,15 +3,21 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - main  # 或者你的主分支名称
+      - main
     tags:
-      - 'v*'  # 当推送 tag 时触发
-  workflow_dispatch:  # 允许手动触发
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 env:
   # 阿里云镜像仓库配置
-  REGISTRY: crpi-oh0htpyti7ebk0ji.cn-hangzhou.personal.cr.aliyuncs.com  # ✅ 个人实例地址
-  IMAGE_NAME: ai_travel_planner12/ai-travel-planner  # 修改为你的命名空间和镜像名
+  ALIYUN_REGISTRY: crpi-oh0htpyti7ebk0ji.cn-hangzhou.personal.cr.aliyuncs.com
+  ALIYUN_IMAGE_NAME: ai_travel_planner12/ai-travel-planner
+  # GitHub Container Registry 配置
+  GHCR_REGISTRY: ghcr.io
+  GHCR_IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-and-push:
@@ -19,6 +25,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -30,36 +37,183 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # 登录阿里云容器镜像服务
       - name: Log in to Aliyun Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ${{ env.ALIYUN_REGISTRY }}
           username: ${{ secrets.ALIYUN_USERNAME }}
           password: ${{ secrets.ALIYUN_PASSWORD }}
 
-      - name: Extract metadata (tags, labels)
-        id: meta
+      # 登录 GitHub Container Registry
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 提取 Docker 元数据（标签和标注）
+      - name: Extract Docker metadata for Aliyun
+        id: meta-aliyun
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.ALIYUN_REGISTRY }}/${{ env.ALIYUN_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha
+            type=semver,pattern={{major}}
+            type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push Docker image
+      - name: Extract Docker metadata for GHCR
+        id: meta-ghcr
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # 构建并推送到阿里云
+      - name: Build and push to Aliyun
         uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-aliyun.outputs.tags }}
+          labels: ${{ steps.meta-aliyun.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_AMAP_KEY=${{ secrets.NEXT_PUBLIC_AMAP_KEY }}
+            NEXT_PUBLIC_AMAP_SECRET=${{ secrets.NEXT_PUBLIC_AMAP_SECRET }}
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Image digest
-        run: echo ${{ steps.meta.outputs.digest }}
+      # 构建并推送到 GitHub Container Registry
+      - name: Build and push to GHCR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-ghcr.outputs.tags }}
+          labels: ${{ steps.meta-ghcr.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_AMAP_KEY=${{ secrets.NEXT_PUBLIC_AMAP_KEY }}
+            NEXT_PUBLIC_AMAP_SECRET=${{ secrets.NEXT_PUBLIC_AMAP_SECRET }}
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 输出镜像摘要
+      - name: Output image digests
+        run: |
+          echo "### 🚀 Docker Images Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Aliyun Container Registry" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta-aliyun.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### GitHub Container Registry" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta-ghcr.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # 创建 GitHub Release（当推送 tag 时）
+  create-release:
+    needs: build-and-push
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # 获取上一个 tag
+          PREVIOUS_TAG=$(git describe --abbrev=0 --tags $(git rev-list --tags --skip=1 --max-count=1) 2>/dev/null || echo "")
+          
+          # 生成变更日志
+          if [ -z "$PREVIOUS_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          else
+            CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+          
+          # 保存到输出
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## 🎉 What's Changed
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ## 📦 Docker Images
+            
+            ### Pull from GitHub Container Registry (推荐)
+            ```bash
+            docker pull ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            docker pull ghcr.io/${{ github.repository }}:latest
+            ```
+            
+            ### Pull from Aliyun Container Registry
+            ```bash
+            docker pull ${{ env.ALIYUN_REGISTRY }}/${{ env.ALIYUN_IMAGE_NAME }}:${{ github.ref_name }}
+            docker pull ${{ env.ALIYUN_REGISTRY }}/${{ env.ALIYUN_IMAGE_NAME }}:latest
+            ```
+            
+            ## 🚀 Quick Start
+            
+            ```bash
+            # 创建环境变量文件
+            cat > .env << EOF
+            NEXT_PUBLIC_AMAP_KEY=your_key
+            NEXT_PUBLIC_AMAP_SECRET=your_secret
+            NEXT_PUBLIC_SUPABASE_URL=your_url
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key
+            SUPABASE_SERVICE_ROLE_KEY=your_key
+            DASHSCOPE_API_KEY=your_key
+            IFLYTEK_APPID=your_appid
+            IFLYTEK_APIKEY=your_key
+            EOF
+            
+            # 运行容器
+            docker run -d \
+              --name ai-travel-planner \
+              -p 3000:3000 \
+              --env-file .env \
+              ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ```
+            
+            ## 📖 Documentation
+            
+            查看完整文档：[README.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/README.md)
+          draft: false
+          prerelease: false
